@@ -370,48 +370,39 @@ start_mining() {
          return 1
      fi
 
-     print_message $YELLOW "\n--- Запуск майнинга ---"
-     # Проверка баланса ETH (информационно)
-     print_message $YELLOW "Для майнинга требуется минимум 0.005 ETH в сети Eclipse на вашем кошельке."
-     print_message $YELLOW "Текущий адрес кошелька: $(solana address)"
-     if ! confirm "Убедились, что кошелек пополнен и готовы запустить майнинг?"; then
-         print_message $RED "Запуск майнинга отменен."
+     print_message $YELLOW "\nЗапуск майнинга в сессии screen 'bitz_mining'..."
+     # Проверяем, есть ли уже сессия
+     if screen -list | grep -q "bitz_mining"; then
+         print_message $YELLOW "Сессия 'bitz_mining' уже существует."
+          if confirm "Подключиться к существующей сессии вместо запуска новой?"; then
+              print_message $GREEN "Подключение к сессии... (Чтобы выйти из screen: Ctrl+A, затем D)"
+              # Запускаем screen в текущем терминале для подключения
+              screen -r bitz_mining
+              return 0 # Выходим после подключения
+          else
+              print_message $YELLOW "Запуск новой сессии отменен. Существующая сессия продолжит работу (если была запущена)."
+              print_message $YELLOW "Вы можете вручную остановить её: screen -X -S bitz_mining quit"
+              return 1
+          fi
+     fi
+
+     # Формируем команду запуска с учетом выбранных ядер
+     local start_command="bitz collect"
+     if [ -n "$SELECTED_CORES" ]; then
+         print_message $YELLOW "Запуск с $SELECTED_CORES ядрами."
+         start_command="$start_command --cores $SELECTED_CORES"
+     fi
+
+     # Запускаем новую сессию в фоне, вывод теперь будет внутри screen
+     screen -dmS bitz_mining bash -c "$start_command" # Убрали &> $log_file
+      if [ $? -ne 0 ]; then
+         print_message $RED "Не удалось запустить майнинг в screen."
          return 1
      fi
 
-    print_message $YELLOW "Запуск майнинга в сессии screen 'bitz_mining'..."
-    # Проверка, есть ли уже сессия
-    if screen -list | grep -q "bitz_mining"; then
-        print_message $YELLOW "Сессия 'bitz_mining' уже существует."
-         if confirm "Подключиться к существующей сессии вместо запуска новой?"; then
-             print_message $GREEN "Подключение к сессии... (Чтобы выйти из screen: Ctrl+A, затем D)"
-             # Запускаем screen в текущем терминале для подключения
-             screen -r bitz_mining
-             return 0 # Выходим после подключения
-         else
-             print_message $YELLOW "Запуск новой сессии отменен. Существующая сессия продолжит работу (если была запущена)."
-             print_message $YELLOW "Вы можете вручную остановить её: screen -X -S bitz_mining quit"
-             return 1
-         fi
-    fi
-
-    # Формируем команду запуска с учетом выбранных ядер
-    local start_command="bitz collect"
-    if [ -n "$SELECTED_CORES" ]; then
-        print_message $YELLOW "Запуск с $SELECTED_CORES ядрами."
-        start_command="$start_command --cores $SELECTED_CORES"
-    fi
-
-    # Запускаем новую сессию в фоне, вывод теперь будет внутри screen
-    screen -dmS bitz_mining bash -c "$start_command" # Убрали &> $log_file
-     if [ $? -ne 0 ]; then
-        print_message $RED "Не удалось запустить майнинг в screen."
-        return 1
-    fi
-
-    print_message $GREEN "Майнинг успешно запущен в фоновой сессии screen 'bitz_mining'."
-    print_message_summary # Выводим инфо после запуска
-    return 0
+     print_message $GREEN "Майнинг успешно запущен в фоновой сессии screen 'bitz_mining'."
+     print_message_summary # Выводим инфо после запуска
+     return 0
 }
 
 # Вывод итоговой информации
@@ -567,6 +558,13 @@ run_install_or_manage() {
     fi
 
     print_message $GREEN "\nСкрипт завершил основную работу."
+    # Добавляем сообщение о необходимости обновить PATH в текущей сессии
+    print_message $YELLOW "\n------------------------------------------------------------------"
+    print_message $YELLOW "ВАЖНО: Чтобы команды 'bitz' и 'solana' заработали в ЭТОМ ЖЕ терминале,"
+    print_message $YELLOW "выполните:\n"
+    print_message $NC "  source \$HOME/.cargo/env && export PATH=\"\$HOME/.local/share/solana/install/active_release/bin:\$PATH\""
+    print_message $YELLOW "\nЛибо просто откройте НОВЫЙ терминал."
+    print_message $YELLOW "------------------------------------------------------------------"
     exit 0
 }
 
