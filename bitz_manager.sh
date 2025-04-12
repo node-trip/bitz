@@ -398,12 +398,15 @@ start_mining() {
     # Формируем команду запуска с учетом выбранных ядер
     local start_command="bitz collect"
     if [ -n "$SELECTED_CORES" ]; then
-        start_command="$start_command --cores $SELECTED_CORES"
         print_message $YELLOW "Запуск с $SELECTED_CORES ядрами."
+        start_command="$start_command --cores $SELECTED_CORES"
     fi
 
-    # Запускаем новую сессию в фоне
-    screen -dmS bitz_mining bash -c "$start_command" # Запускаем команду в bash внутри screen
+    local log_file="/root/bitz_miner.log" # Лог-файл в /root/
+    print_message $YELLOW "Весь вывод майнера будет записан в лог-файл: $log_file"
+
+    # Запускаем новую сессию в фоне, перенаправляя вывод в лог
+    screen -dmS bitz_mining bash -c "$start_command &> $log_file" # Используем &> для перенаправления stdout и stderr
      if [ $? -ne 0 ]; then
         print_message $RED "Не удалось запустить майнинг в screen."
         return 1
