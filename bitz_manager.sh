@@ -278,7 +278,7 @@ configure_solana_rpc() {
         print_message $RED "Solana CLI не найден."
         return 1
     fi
-    local eclipse_rpc="https://mainnetbeta-rpc.eclipse.xyz/"
+    local eclipse_rpc="https://eclipse.helius-rpc.com/"
     local current_rpc=$(solana config get | grep "RPC URL" | awk '{print $3}')
 
     if [ "$current_rpc" == "$eclipse_rpc" ]; then
@@ -380,7 +380,7 @@ start_mining() {
      fi
 
     print_message $YELLOW "Запуск майнинга в сессии screen 'bitz_mining'..."
-    # Проверяем, есть ли уже сессия
+    # Проверка, есть ли уже сессия
     if screen -list | grep -q "bitz_mining"; then
         print_message $YELLOW "Сессия 'bitz_mining' уже существует."
          if confirm "Подключиться к существующей сессии вместо запуска новой?"; then
@@ -402,11 +402,8 @@ start_mining() {
         start_command="$start_command --cores $SELECTED_CORES"
     fi
 
-    local log_file="/root/bitz_miner.log" # Лог-файл в /root/
-    print_message $YELLOW "Весь вывод майнера будет записан в лог-файл: $log_file"
-
-    # Запускаем новую сессию в фоне, перенаправляя вывод в лог
-    screen -dmS bitz_mining bash -c "$start_command &> $log_file" # Используем &> для перенаправления stdout и stderr
+    # Запускаем новую сессию в фоне, вывод теперь будет внутри screen
+    screen -dmS bitz_mining bash -c "$start_command" # Убрали &> $log_file
      if [ $? -ne 0 ]; then
         print_message $RED "Не удалось запустить майнинг в screen."
         return 1
